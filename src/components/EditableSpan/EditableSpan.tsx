@@ -1,29 +1,46 @@
-import React, { ChangeEvent, useState } from 'react';
-import TextField from '@mui/material/TextField';
+import React, {ChangeEvent, FocusEvent, KeyboardEvent, useCallback, useState} from "react";
+import {TextField} from "@material-ui/core";
+import {TaskStatuses} from "../../api/todolists-api";
 
-type EditableSpanPropsType = {
-    value: string
-    onChange: (newValue: string) => void
+export type EditableSpanPropsType = {
+    status: TaskStatuses
+    title: string
+    changeItemValue: (value: string) => void
 }
 
-export const EditableSpan = React.memo(function (props: EditableSpanPropsType) {
-    console.log('EditableSpan called');
-    let [editMode, setEditMode] = useState(false);
-    let [title, setTitle] = useState(props.value);
+export const EditableSpan = React.memo(function(props: EditableSpanPropsType) {
+    const [edit, setEdit] = useState<boolean>(false)
+    const [value, setValue] = useState<string>('')
 
-    const activateEditMode = () => {
-        setEditMode(true);
-        setTitle(props.value);
-    }
-    const activateViewMode = () => {
-        setEditMode(false);
-        props.onChange(title);
-    }
-    const changeTitle = (e: ChangeEvent<HTMLInputElement>) => {
-        setTitle(e.currentTarget.value)
-    }
+    const onSetEditHandler = useCallback(() => {
+        setEdit(true)
+        setValue(props.title)
+    }, [setEdit, setValue, props])
 
-    return editMode
-        ? <TextField value={title} onChange={changeTitle} autoFocus onBlur={activateViewMode}/>
-        : <span onDoubleClick={activateEditMode}>{props.value}</span>
-});
+    const onFocusBlur = useCallback((event: FocusEvent<HTMLInputElement>) => {
+        props.changeItemValue(event.currentTarget.value)
+        setEdit(false)
+    }, [props, setEdit])
+
+    const onChangeValueHandler = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+        setValue(event.currentTarget.value)
+    }, [setValue])
+
+    const onEnterKeyHandler = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+        if(event.key === 'Enter') {
+            props.changeItemValue(value)
+            setEdit(false)
+        }
+    }, [props, setEdit, value])
+
+    return edit
+        ? <TextField onKeyPress={onEnterKeyHandler}
+                     onChange={onChangeValueHandler}
+                     onBlur={onFocusBlur} value={value}
+                     autoFocus
+                     type="text"/>
+        : <span onDoubleClick={onSetEditHandler}
+                className={props.status === TaskStatuses.Completed
+                    ? 'doneTask'
+                    : 'inProcess'}>{props.title} </span>
+})
